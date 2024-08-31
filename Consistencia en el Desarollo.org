@@ -1,0 +1,599 @@
+:PROPERTIES:
+:ID:       d9b11c19-c8ee-4f20-9e77-69195f38afae
+:END:
+#+OPTIONS: toc:nil tags:nil
+#+OPTIONS: reveal_width:1400 reveal_height:1200
+#+OPTIONS: reveal_keyboard
+#+REVEAL_VERSION: 4
+#+REVEAL_ROOT: https://cdn.jsdelivr.net/npm/reveal.js
+#+REVEAL_THEME: solarized
+#+REVEAL_HEAD_PREAMBLE: <style type="text/css"> :root {  --r-main-font-size: 50px;  }</style>
+#+REVEAL_HEAD_PREAMBLE: <style type="text/css">
+#+REVEAL_HEAD_PREAMBLE:  .reveal p {
+#+REVEAL_HEAD_PREAMBLE:    text-align: left;
+#+REVEAL_HEAD_PREAMBLE:  }
+#+REVEAL_HEAD_PREAMBLE:  .reveal ul {
+#+REVEAL_HEAD_PREAMBLE:    display: block;
+#+REVEAL_HEAD_PREAMBLE:  }
+#+REVEAL_HEAD_PREAMBLE:  .reveal ol {
+#+REVEAL_HEAD_PREAMBLE:    display: block;
+#+REVEAL_HEAD_PREAMBLE:  }  
+#+REVEAL_HEAD_PREAMBLE:</style>
+#+title: Consistencia en el Desarrollo
+
+* Exportando esta presentación                                     :noexport:
+ Instalar emacs
+
+ #+begin_src sh
+   snap install emacs --classic
+ #+end_src
+ 
+Configurar =org-mode=
+
+#+begin_src elisp
+  (use-package org)
+#+end_src
+
+Configurar =org-re-reveal=
+
+#+begin_src elisp
+  (use-package org-re-reveal
+    :ensure t)
+#+end_src
+
+Exportar la presentación, seleccionando =reveal.js= (las fotos de adorno
+no están)
+
+#+begin_src elisp
+  (org-export-dispatch)
+#+end_src
+
+Exportar los ejemplos
+
+#+begin_src elisp
+  (org-babel-tangle)
+#+end_src
+
+* Sobre mí                                                           :ATTACH:
+:PROPERTIES:
+:ID:       826e5056-b426-4409-9436-e59bc122a81f
+:END:
+
+- Gerente de Ingenieria en Canonical para /Starcraft/
+- Trabajando en el area de /Experiencia de Desarrollo/
+- 12 años en Canonical/Ubuntu
+
+#+DOWNLOADED: /home/sergiusens/Pictures/Web/2024/202408-Family-Florianópolis-Morro das Pedras/SERGIO_SCHVEZOV-20240817-085032-DSCF0651.jpg @ 2024-08-30 11:44:16
+#+attr_html: :width 50% :height 50% :style text-aligns:center
+[[attachment:2024-08-30_11-44-16_SERGIO_SCHVEZOV-20240817-085032-DSCF0651.jpg]]
+
+  
+* La aplicación
+
+** El código
+Una applicación basada en Flask tan compleja como necesaria y simple
+que se pueda, =app.py= en la raíz de todos los proyectos.
+
+#+begin_src python :tangle snap/app.py
+  import flask
+
+  app = flask.Flask(__name__)
+
+
+  @app.route("/")
+  def index():
+      return "Hola UbuconLA\n"
+
+
+  if __name__ == "__main__":
+      app.run()
+#+end_src
+
+*** Rockcraft                                                    :noexport:
+#+begin_src python :tangle rock/app.py
+  import flask
+
+  app = flask.Flask(__name__)
+
+
+  @app.route("/")
+  def index():
+      return "Hola UbuconLA\n"
+
+
+  if __name__ == "__main__":
+      app.run()
+#+end_src
+
+*** Rockcraft                                                    :noexport:
+#+begin_src python :tangle rock-extension/app.py
+  import flask
+
+  app = flask.Flask(__name__)
+
+
+  @app.route("/")
+  def index():
+      return "Hola UbuconLA\n"
+
+
+  if __name__ == "__main__":
+      app.run()
+#+end_src
+
+** Sus requerimientos
+En un =requirements.txt=
+
+#+begin_src in :tangle snap/requirements.txt
+flask
+#+end_src
+
+*** Rockcraft                                                    :noexport:
+#+begin_src in :tangle rock-extension/requirements.txt
+flask
+#+end_src
+
+
+*** Rockcraft                                                    :noexport:
+#+begin_src in :tangle rock/requirements.txt
+flask
+#+end_src
+
+* Snapcraft
+** Proyecto
+Definición de un =snapcraft.yaml= para la aplicación definida, en tres partes:
+
+- metadata
+- dominio de la aplicación
+- construcción
+
+*** Metadata
+
+#+begin_src yaml :tangle snap/snapcraft.yaml
+  name: ubuconla-flask
+  version: 1.0
+  summary: Devolver un hola a la audiencia
+  description: |
+    Aplicación de ejemplo con ningun fin productivo o de lazer, un mero
+    aplicativo con fines educativos.
+
+  contact: sergio.schvezov@canonical.com
+  issues: https://forum.snapcraft.io
+  website: https://forum.snapcraft.io
+#+end_src
+
+*** Dominio de Aplicación
+
+#+begin_src yaml :tangle snap/snapcraft.yaml
+  grade: stable
+  confinement: strict
+
+  apps:
+    ubuconla-flask:
+      command: bin/flask --app $SNAP/app run --port 6000
+      daemon: simple
+      plugs:
+        - network-bind
+#+end_src
+
+*** Construcción
+
+#+begin_src yaml :tangle snap/snapcraft.yaml
+   base: core24
+
+   platforms:
+     amd64:
+
+   parts:
+     flask-deps:
+       source: .
+       plugin: python
+       python-requirements:
+         - requirements.txt
+     app:
+       source: .
+       plugin: dump
+       prime:
+         - app.py
+#+end_src
+
+** Probando
+
+Empaquetar e instalar
+
+#+begin_src sh :dir snap :results none
+  snapcraft pack
+  snap install ubuconla-flask_1.0_amd64.snap --dangerous
+#+end_src
+
+Correr esto
+#+name: snap-curl
+#+begin_src sh :dir snap :wrap example :exports both :cache yes
+  curl http://localhost:6000
+#+end_src
+
+... produce lo siguiente
+
+#+RESULTS[cc4002e70690a62e0cce1625e395f933eb96ccb1]: snap-curl
+#+begin_example
+Hola UbuconLA
+#+end_example
+
+** Publicando
+
+Registramos el nombre
+
+#+begin_src sh :dir snap
+  snapcraft register ubuconla-flask
+#+end_src
+
+Publicar implicar crear una revisión y despues asignar un canal a esa revision
+
+#+begin_src sh :dir snap
+  snapcraft upload ubuconla-flask_1.0_amd64.snap
+  snapcraft release ubuconla-flask 1 edge
+#+end_src
+
+Lo anterior tiene un atajo
+#+begin_src sh :dir snap
+  snapcraft upload ubuconla-flask_1.0_amd64.snap --release edge
+#+end_src
+
+* Ciclo de vida cuando se constuye                                   :ATTACH:
+:PROPERTIES:
+:ID:       43778fa0-d5e7-4120-98e4-1ff202a563c0
+:END:
+
+#+DOWNLOADED: screenshot @ 2024-08-31 09:24:49
+[[attachment:2024-08-31_09-24-49_screenshot.png]]
+
+
+
+* Rockcraft
+** Proyecto
+Definición de un =rockcraft.yaml= para la aplicación definida,
+nuevamente, en tres partes:
+
+- metadata
+- dominio de la aplicación
+- construcción
+
+*** Metadata
+
+#+begin_src yaml :tangle rock/rockcraft.yaml
+  name: ubuconla-flask
+  version: 1.0
+  summary: Devolver un hola a la audiencia
+  description: |
+    Aplicación de ejemplo con ningun fin productivo o de lazer, un mero
+    aplicativo con fines educativos.
+
+  contact: sergio.schvezov@canonical.com
+  issues: https://forum.snapcraft.io
+#+end_src
+
+*** Dominio de Aplicación
+
+#+begin_src yaml :tangle rock/rockcraft.yaml
+  services:
+    flask-app:
+      override: replace
+      command: flask --app /app run  --host 0.0.0.0 --port 7000
+      startup: enabled
+      on-success: shutdown
+      on-failure: shutdown
+      working-dir: /tmp
+#+end_src
+
+*** Construcción
+
+#+begin_src yaml :tangle rock/rockcraft.yaml
+  base: ubuntu@22.04
+
+  platforms:
+    amd64:
+
+  parts:
+    flask-deps:
+      source: .
+      plugin: python
+      python-requirements:
+        - requirements.txt
+      stage-packages:
+        - base-files
+        - python3.10
+        - python3-venv
+    app:
+      source: .
+      plugin: dump
+      prime:
+        - app.py
+#+end_src
+
+** Probando
+
+Empaquetar, instalar y correr
+
+#+begin_src sh :dir rock :results none
+  rockcraft pack
+  podman load --input ubuconla-flask_1.0_amd64.rock
+  podman run -p 7000:7000 localhost/1.0:latest
+#+end_src
+
+Correr esto
+#+name: rock-curl
+#+begin_src sh :dir rock :wrap example :exports both :cache yes
+  curl http://localhost:7000
+#+end_src
+
+... produce lo siguiente
+
+#+RESULTS[c150ef73f29577f617495e86a5df25bc6f47552d]: rock-curl
+#+begin_example
+Hola UbuconLA
+#+end_example
+
+* Rockcraft con extensiones
+** Proyecto
+Definición reducida de un =rockcraft.yaml= para la aplicación definida,
+nuevamente, en tres partes:
+
+- metadata
+- dominio de la aplicación
+- construcción
+
+*** Metadata
+
+#+begin_src yaml :tangle rock-extension/rockcraft.yaml
+  name: ubuconla-flask
+  version: 1.0
+  summary: Devolver un hola a la audiencia
+  description: |
+    Aplicación de ejemplo con ningun fin productivo o de lazer, un mero
+    aplicativo con fines educativos.
+
+  contact: sergio.schvezov@canonical.com
+  issues: https://forum.snapcraft.io
+#+end_src
+
+*** Dominio de Aplicación                                                   :ATTACH:
+:PROPERTIES:
+:ID:       0374a149-3d36-4129-97cf-69fbd0844bb5
+:END:
+
+#+DOWNLOADED: file:///home/sergiusens/Pictures/Web/2024/202408-Family-Florian%C3%B3polis-Morro%20das%20Pedras/SERGIO_SCHVEZOV-20240817-085002-DSCF0648.jpg @ 2024-08-30 15:40:47
+[[attachment:2024-08-30_15-40-47_SERGIO_SCHVEZOV-20240817-085002-DSCF0648.jpg]]
+
+
+*** Construcción
+
+#+begin_src yaml :tangle rock-extension/rockcraft.yaml
+  build-base: ubuntu@22.04
+  base: bare
+  
+  platforms:
+    amd64:
+
+  extensions:
+    - flask-framework
+#+end_src
+
+** Probando
+
+Empaquetar, instalar y correr
+
+#+begin_src sh :dir rock-extension :results none
+  rockcraft pack
+  rockcraft.skopeo --insecure-policy copy \
+       oci-archive:ubuconla-flask_1.0_amd64.rock \
+       docker-daemon:ubuconla-flask:1.0
+  docker run -d -p 8000:8000 ubuconla-flask:1.0
+#+end_src
+
+Correr esto
+
+#+name: rock-extension-curl
+#+begin_src sh :dir rock-extension :wrap example :exports both :cache yes
+  curl http://localhost:8000
+#+end_src
+
+... produce lo siguiente
+
+#+RESULTS[23d82ffa8a8a75f20c8236732a3440780d3ea4de]: rock-extension-curl
+#+begin_example
+Hola UbuconLA
+#+end_example
+
+** Comandos
+
+Para tener un punto de partida
+
+#+begin_src 
+rockcraft init --profile flask-framework
+#+end_src
+
+Para ver que hizo la extension
+
+#+begin_src sh
+rockcraft expand-extensions
+#+end_src
+
+* Charmcraft
+** Proyecto
+Definición reducida de un =charmcraft.yaml= para la aplicación definida,
+nuevamente, en tres partes:
+
+- metadata
+- dominio de la aplicación
+- construcción
+
+*** Usando templates
+
+#+begin_src sh :dir charm :results none
+  charmcraft init --profile flask-framework
+#+end_src
+
+Esto crea:
+
+- =charmcraft.yaml=
+- =requirements.txt=
+- =src/charm.py=
+    
+*** Metadata 
+
+#+begin_src yaml  :tangle charm/charmcraft.yaml
+  name: ubuconla-flask
+  summary: Devolver un hola a la audiencia
+  description: |
+    Aplicación de ejemplo con ningun fin productivo o de lazer, un mero
+    aplicativo con fines educativos.
+#+end_src
+
+*** Dominio de Aplicación
+
+#+begin_src yaml   :tangle charm/charmcraft.yaml
+  type: charm
+#+end_src
+
+*** Construcción
+
+#+begin_src yaml   :tangle charm/charmcraft.yaml
+  bases:  # platform
+    - build-on:
+      - name: ubuntu
+        channel: "22.04"
+      run-on:
+      - name: ubuntu
+        channel: "22.04"
+
+  extensions:
+    - flask-framework
+#+end_src
+
+
+** Probando
+
+*** Construir
+Empaquetar, instalar y correr
+
+#+begin_src sh :dir charm :results none
+  charmcraft fetch-libs
+  charmcraft pack
+#+end_src
+
+*** microk8s y juju
+
+... instalamos snaps
+
+#+begin_src sh
+  snap install microk8s --channel 1.30-strict/stable
+  snap install juju --channel 3.5/stable
+#+end_src
+
+... configuramos microk8s
+
+#+begin_src sh
+  sudo usermod -a -G snap_microk8s sergiusens
+  newgrp snap_microk8s
+  sudo microk8s enable hostpath-storage
+  sudo microk8s enable dns
+  sudo microk8s enable registry
+  sudo microk8s enable ingress
+#+end_src
+
+... y inicializamos juju
+
+#+begin_src sh
+    juju bootstrap microk8s ubuconla
+    juju add-model ubuconla-flask
+#+end_src
+
+*** Juju deploy y probar
+
+Ponemos el /rock/ anterior en docker
+
+#+begin_src sh :dir rock-extension :results none
+  rockcraft.skopeo --insecure-policy copy --dest-tls-verify=false \
+                   oci-archive:ubuconla-flask_1.0_amd64.rock \
+                   docker://localhost:32000/ubuconla-flask:1.0
+#+end_src
+
+Hacemos /deploy/
+
+#+begin_src sh :dir charm
+  juju deploy ./ubuconla-flask_ubuntu-22.04-amd64.charm ubuconla-flask \
+       --resource flask-app-image=localhost:32000/ubuconla-flask:1.0
+#+end_src
+
+Al final de ese paso vemos
+
+#+begin_example
+Deploying "ubuconla-flask" from local charm "ubuconla-flask", revision 0 on ubuntu@22.04/stable
+#+end_example
+
+Vemos el estado
+#+begin_src sh
+  juju status --watch 5s
+#+end_src
+
+Luego corremos
+
+#+begin_src sh
+  curl <ip>:8000
+#+end_src
+
+... y vemos
+
+#+begin_example
+Hola UbuconLA
+#+end_example
+
+** Publicando
+
+Registramos el nombre
+
+#+begin_src sh :dir charm
+  charmcraft register ubuconla-flask
+#+end_src
+
+Publicar implicar crear una revisión, subir la imagen OCI como un
+recurso del charm y despues asignar un canal a esa tupla de revisiones
+
+#+begin_src sh :dir snap
+  charmcraft upload ubuconla-flask_ubuntu-22.04-amd64.charm
+  charmcraft upload-resource \
+             ubuconla-flask \
+             flask-app-image \
+             --image=oci-archive:ubuconla-flask_1.0_amd64.rock \
+  charmcraft release ubuconla-flask --revision  1 --channel edge \
+             --resource flask-app-image:1
+#+end_src
+
+* Tu propio Craft
+
+- Código https://github.com/canonical/craft-application
+- Crear =AppMetadata=, minimamente, para dar identidad especial:
+    - BuildPlanner
+    - Project
+- Implementar =PackageService=
+  
+* Meta
+La presentación y estos ejemplos se pueden encontrar en
+
+#+begin_example
+git clone https://github.com/sergiusens/ubuconla-2024
+#+end_example
+
+* Fin                                                                :ATTACH:
+:PROPERTIES:
+:ID:       1b50d585-e7c2-4de0-b212-f70f67c9fff8
+:END:
+
+#+DOWNLOADED: /home/sergiusens/Pictures/Web/2024/202408-Family-Florianópolis-Morro das Pedras/SERGIO_SCHVEZOV-20240817-084552-DSCF0630.jpg @ 2024-08-30 18:07:13
+[[attachment:2024-08-30_18-07-13_SERGIO_SCHVEZOV-20240817-084552-DSCF0630.jpg]]
+
+* Configuración                                                    :noexport:
+# Local Variables:
+# org-download-image-dir: ./img
+# End:
+
